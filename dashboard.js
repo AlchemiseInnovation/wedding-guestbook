@@ -1,11 +1,11 @@
 // ---------------------------------------------------------
 // SUPABASE CLIENT (WITH REAL KEY)
 // ---------------------------------------------------------
-const SUPABASE_URL = "https://hagiyjmimmdaubrgndik.supabase.co";
-const SUPABASE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhZ2l5am1pbW1kYXVicmduZGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTQ4ODAsImV4cCI6MjA4MjQ5MDg4MH0.bTCzaL35Qk7UDduqmsyfyXKkLQBulrEZ0IbZ3ZA6S_s";
+// const SUPABASE_URL = "https://hagiyjmimmdaubrgndik.supabase.co";
+// const SUPABASE_KEY =
+//  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhZ2l5am1pbW1kYXVicmduZGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTQ4ODAsImV4cCI6MjA4MjQ5MDg4MH0.bTCzaL35Qk7UDduqmsyfyXKkLQBulrEZ0IbZ3ZA6S_s";
 
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let glyphNodes = [];        // now loaded from Supabase
 let themedGlyphs = [];      // glyphs after theme applied
