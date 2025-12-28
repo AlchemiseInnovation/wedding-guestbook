@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Admin – Glyph Engine</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <h1>Admin – Glyph & Theme Control</h1>
+
+  <section id="themeSection">
+    <h2>Theme configuration</h2>
+    <div>
+      <label>Main theme:
+        <select id="themeSelect"></select>
+      </label>
+    </div>
+    <div>
+      <label>Label theme:
+        <select id="labelThemeSelect"></select>
+      </label>
+    </div>
+    <div>
+      <label>Color theme:
+        <select id="colorThemeSelect"></select>
+      </label>
+    </div>
+    <div>
+      <label>Icon theme:
+        <select id="iconThemeSelect"></select>
+      </label>
+    </div>
+    <button id="saveThemeConfig">Save theme config</button>
+
+    <div id="themeConfigStatus"></div>
+  </section>
+
+  <section id="glyphSection">
+    <h2>Glyphs</h2>
+    <button id="addGlyph">Add glyph</button>
+    <table id="glyphTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Label</th>
+          <th>Color</th>
+          <th>Icon (URL or path)</th>
+          <th>Order</th>
+          <th>Active</th>
+          <th>Preview</th>
+          <th>Delete</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div id="glyphStatus"></div>
+  </section>
+
+  <section id="systemSection">
+    <h2>System controls</h2>
+    <button id="toggleLockout">Toggle lockout</button>
+    <span id="lockoutState"></span>
+    <div style="margin-top: 10px;">
+      <button id="exportGlyphs">Export glyphs (JSON)</button>
+      <button id="exportThemes">Export themes (JSON)</button>
+      <button id="exportEntries">Export entries (CSV)</button>
+    </div>
+  </section>
+
+  <script src="config.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
