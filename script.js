@@ -50,15 +50,17 @@ async function loadEntries() {
 async function submitEntry(entry) {
   const { data, error } = await db
     .from("entries")
-    .insert([entry]);
+    .insert([entry])
+    .select(); // ensures Supabase returns the inserted row
 
   if (error) {
     console.error("Error submitting entry:", error);
     return null;
   }
 
-  return data[0];
+  return data ? data[0] : null;
 }
+
 
 
 // ---------------------------------------------------------
