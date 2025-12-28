@@ -7,18 +7,147 @@ const SUPABASE_KEY =
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let glyphNodes = [];
+let glyphNodes = [];        // now loaded from Supabase
+let themedGlyphs = [];      // glyphs after theme applied
+let themes = {};            // all themes from DB
+let themeConfig = {};       // active theme config
 let entries = [];
 
 // ---------------------------------------------------------
-// LOAD GLYPHS
+// LOAD GLYPHS (FROM SUPABASE, replacing glyphs.json)
 // ---------------------------------------------------------
-fetch("glyphs.json")
-  .then(res => res.json())
-  .then(data => {
-    glyphNodes = data.glyphNodes;
-    refreshDashboard();
-  });
+async function loadGlyphs() {
+  const { data, error } = await db
+    .from("glyphs")
+    .select("*")
+    .eq("active", true)
+    .order("order_index", { ascending: true });
+
+  if (error) {
+    console.error("Error loading glyphs:", error);
+    return [];
+  }
+
+  return data;
+}
+
+// ---------------------------------------------------------
+// LOAD THEMES
+// ---------------------------------------------------------
+async function loadThemes() {
+  const { data, error } = await db.from("themes").select("*");
+  if (error) {
+    console.error("Error loading themes:", error);
+    return {};
+  }
+
+  const map = {};
+  data.forEach(t => (map[t.name] = t));
+  return map;
+}
+
+// ---------------------------------------------------------
+// LOAD THEME CONFIG
+// ---------------------------------------------------------
+async function loadThemeConfig() {
+  const { data, error } = await db
+    .from("settings")
+    .select("value")
+    .eq("key", "themeConfig")
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error loading themeConfig:", error);
+    return {
+      theme: "elegant",
+      labelTheme: "elegant",
+      colorTheme: "elegant",
+      iconTheme: "elegant"
+    };
+  }
+
+  return data?.value || {
+    theme: "elegant",
+    labelTheme: "elegant",
+    colorTheme: "elegant",
+    iconTheme: "elegant"
+  };
+}
+
+// ---------------------------------------------------------
+// APPLY THEME TO A GLYPH
+// ---------------------------------------------------------
+function applyThemeToGlyph(glyph, themes, config) {
+  const { labelTheme, colorTheme, iconTheme } = config;
+
+  const labelPack = themes[labelTheme] || {};
+  const colorPack = themes[colorTheme] || {};
+  const iconPack = themes[iconTheme] || {};
+
+  const themedLabel =
+    labelPack.labels?.[glyph.id] || glyph.label;
+
+  const themedColor =
+    colorPack.colors?.[glyph.id] || glyph.color;
+
+  // icon priority: custom glyph.icon > theme override > icon pack > placeholder
+  let icon =
+    glyph.icon ||
+    iconPack.icons?.[glyph.id] ||
+    `/icons/${iconTheme}/${glyph.id}.svg`;
+
+  if (!icon) icon = "/icons/placeholder.svg";
+
+  return {
+    ...glyph,
+    label: themedLabel,
+    color: themedColor,
+    resolvedIcon: icon
+  };
+}
+
+// ---------------------------------------------------------
+// INITIAL LOAD
+// ---------------------------------------------------------
+async function initDashboard() {
+  themes = await loadThemes();
+  themeConfig = await loadThemeConfig();
+  glyphNodes = await loadGlyphs();
+
+  themedGlyphs = glyphNodes.map(g =>
+    applyThemeToGlyph(g, themes, themeConfig)
+  );
+
+  refreshDashboard();
+
+  // Realtime entries
+  db.channel("entries-realtime")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "entries" },
+      () => refreshDashboard()
+    )
+    .subscribe();
+
+  // Realtime theme changes
+  db.channel("settings-realtime")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "settings" },
+      async payload => {
+        if (payload.new.key === "themeConfig") {
+          themeConfig = payload.new.value;
+          themedGlyphs = glyphNodes.map(g =>
+            applyThemeToGlyph(g, themes, themeConfig)
+          );
+          renderGlyphMap();
+        }
+      }
+    )
+    .subscribe();
+}
+
+initDashboard();
 
 // ---------------------------------------------------------
 // LOAD ENTRIES
@@ -89,7 +218,7 @@ function renderFeed() {
 }
 
 // ---------------------------------------------------------
-// RENDER GLYPH MAP (WITH LINES, PULSE, TOOLTIP)
+// RENDER GLYPH MAP (WITH THEMES + ICONS)
 // ---------------------------------------------------------
 function renderGlyphMap() {
   const svg = document.getElementById("glyphMap");
@@ -99,7 +228,6 @@ function renderGlyphMap() {
   const radius = 140;
   const center = size / 2;
 
-  // Make sure there's only one tooltip
   let tooltip = document.querySelector(".tooltip");
   if (!tooltip) {
     tooltip = document.createElement("div");
@@ -107,7 +235,7 @@ function renderGlyphMap() {
     document.body.appendChild(tooltip);
   }
 
-  // Nucleus (optional, looks nice)
+  // Nucleus
   const nucleus = document.createElementNS("http://www.w3.org/2000/svg", "circle");
   nucleus.setAttribute("cx", center);
   nucleus.setAttribute("cy", center);
@@ -123,8 +251,8 @@ function renderGlyphMap() {
   nucleusText.textContent = "The Couple";
   svg.appendChild(nucleusText);
 
-  glyphNodes.forEach((node, index) => {
-    const angle = (index / glyphNodes.length) * 2 * Math.PI - Math.PI / 2;
+  themedGlyphs.forEach((node, index) => {
+    const angle = (index / themedGlyphs.length) * 2 * Math.PI - Math.PI / 2;
     const x = center + radius * Math.cos(angle);
     const y = center + radius * Math.sin(angle);
     const count = entries.filter(e => e.glyphNodeId === node.id).length;
@@ -138,19 +266,17 @@ function renderGlyphMap() {
     line.setAttribute("stroke", "#D1D5DB");
     svg.appendChild(line);
 
-    // Node circle with pulse if active
+    // Node circle
     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     circle.setAttribute("cx", x);
     circle.setAttribute("cy", y);
     circle.setAttribute("r", 20);
     circle.setAttribute("fill", node.color);
     circle.setAttribute("stroke", "#111827");
-    if (count > 0) {
-      circle.classList.add("pulse");
-    }
+    if (count > 0) circle.classList.add("pulse");
     svg.appendChild(circle);
 
-    // Label (above)
+    // Label
     const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
     label.setAttribute("x", x);
     label.setAttribute("y", y - 32);
@@ -162,7 +288,7 @@ function renderGlyphMap() {
     label.textContent = node.label;
     svg.appendChild(label);
 
-    // Count (below)
+    // Count
     const countText = document.createElementNS("http://www.w3.org/2000/svg", "text");
     countText.setAttribute("x", x);
     countText.setAttribute("y", y + 16);
@@ -171,20 +297,19 @@ function renderGlyphMap() {
     countText.textContent = `(${count})`;
     svg.appendChild(countText);
 
-    // Tooltip on hover
-    const updateTooltipPosition = (evt) => {
+    // Tooltip
+    const updateTooltipPosition = () => {
       const rect = svg.getBoundingClientRect();
       tooltip.style.left = `${rect.left + x}px`;
       tooltip.style.top = `${rect.top + y - 40}px`;
     };
 
-    circle.addEventListener("mouseenter", (evt) => {
-      tooltip.textContent = `${node.label}: ${count} entr${count === 1 ? "y" : "ies"}`;
+    circle.addEventListener("mouseenter", () => {
+      tooltip.textContent =
+        `${node.label}: ${count} entr${count === 1 ? "y" : "ies"}`;
       tooltip.style.opacity = 1;
-      updateTooltipPosition(evt);
+      updateTooltipPosition();
     });
-
-    circle.addEventListener("mousemove", updateTooltipPosition);
 
     circle.addEventListener("mouseleave", () => {
       tooltip.style.opacity = 0;
@@ -193,44 +318,23 @@ function renderGlyphMap() {
 }
 
 // ---------------------------------------------------------
-// REALTIME UPDATES
-// ---------------------------------------------------------
-db.channel("entries-realtime")
-  .on(
-    "postgres_changes",
-    { event: "*", schema: "public", table: "entries" },
-    () => refreshDashboard()
-  )
-  .subscribe();
-
-// ---------------------------------------------------------
-// CONTROLS
+// CONTROLS (unchanged)
 // ---------------------------------------------------------
 
-// Lockout toggle (expects a settings table with key="lockout")
 document.getElementById("toggleLockout").addEventListener("click", async () => {
   try {
-    const { data, error } = await db
+    const { data } = await db
       .from("settings")
       .select("value")
       .eq("key", "lockout")
       .maybeSingle();
 
-    if (error) {
-      console.error("Error reading lockout:", error);
-      return;
-    }
-
     const current = data ? data.value : false;
-    const { error: updateError } = await db
+
+    await db
       .from("settings")
       .upsert({ key: "lockout", value: !current }, { onConflict: "key" });
 
-    if (updateError) {
-      console.error("Error toggling lockout:", updateError);
-    } else {
-      console.log("Lockout set to:", !current);
-    }
   } catch (err) {
     console.error("Unexpected lockout error:", err);
   }
