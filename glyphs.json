@@ -1,0 +1,11 @@
+{
+  "glyphNodes": [
+    { "id": "glyph-blessing", "label": "Blessing", "color": "#F4C2C2" },
+    { "id": "glyph-memory", "label": "Shared Memory", "color": "#A3C4F3" },
+    { "id": "glyph-advice", "label": "Secret Advice", "color": "#B8E986" },
+    { "id": "glyph-chaos", "label": "Beautiful Chaos", "color": "#F7A8B8" },
+    { "id": "glyph-guardian", "label": "Guardian of Joy", "color": "#FFD166" },
+    { "id": "glyph-weaver", "label": "Story Weaver", "color": "#CDB4DB" },
+    { "id": "glyph-hearth", "label": "Keeper of the Hearth", "color": "#FFB4A2" }
+  ]
+}

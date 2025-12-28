@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Wedding Guest Book — Glyph Nodes</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <header>
+    <h1>Wedding Guest Book</h1>
+    <p>Choose a glyph, gift a wish.</p>
+  </header>
+
+  <main>
+    <section id="left">
+      <form id="entryForm">
+        <h2>Leave a Message</h2>
+
+        <label>Name
+          <input type="text" id="guestName" required />
+        </label>
+
+        <label>Relationship
+          <input type="text" id="relationship" />
+        </label>
+
+        <label>Message
+          <textarea id="message" required></textarea>
+        </label>
+
+        <label>Glyph
+          <select id="glyphSelect"></select>
+        </label>
+
+        <button type="submit">Gift this to the couple</button>
+      </form>
+
+      <div id="glyphList">
+        <h3>Glyph Clusters</h3>
+        <ul id="glyphListItems"></ul>
+      </div>
+    </section>
+
+    <section id="right">
+      <h2>Wedding Glyph Map</h2>
+      <svg id="glyphMap" width="400" height="400"></svg>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

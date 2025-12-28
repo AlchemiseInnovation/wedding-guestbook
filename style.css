@@ -1,0 +1,71 @@
+body {
+  font-family: system-ui, sans-serif;
+  background: #f8f4ff;
+  margin: 0;
+  padding: 24px;
+  color: #222;
+}
+
+header {
+  margin-bottom: 24px;
+}
+
+main {
+  display: flex;
+  gap: 24px;
+}
+
+#left, #right {
+  flex: 1;
+}
+
+form, #glyphList, #right {
+  background: #fff;
+  padding: 16px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+}
+
+form label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+input, textarea, select {
+  width: 100%;
+  padding: 8px 10px;
+  margin-top: 4px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+button {
+  margin-top: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: none;
+  background: #7C3AED;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#glyphList ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.glyph-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}

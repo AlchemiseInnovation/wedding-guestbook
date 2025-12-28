@@ -1,0 +1,156 @@
+let glyphNodes = [];
+let entries = [];
+
+// Load glyphs.json
+fetch("glyphs.json")
+  .then(res => res.json())
+  .then(data => {
+    glyphNodes = data.glyphNodes;
+    populateGlyphSelect();
+    loadEntries(); // <-- NEW: load shared backend entries
+  });
+
+// Load entries from Netlify backend
+function loadEntries() {
+  fetch("/.netlify/functions/entries")
+    .then(res => res.json())
+    .then(data => {
+      entries = data;
+      renderGlyphList();
+      renderGlyphMap();
+    })
+    .catch(err => console.error("Error loading entries:", err));
+}
+
+// Populate dropdown
+function populateGlyphSelect() {
+  const select = document.getElementById("glyphSelect");
+  glyphNodes.forEach(g => {
+    const opt = document.createElement("option");
+    opt.value = g.id;
+    opt.textContent = g.label;
+    select.appendChild(opt);
+  });
+}
+
+// Handle form submission
+document.getElementById("entryForm").addEventListener("submit", e => {
+  e.preventDefault();
+
+  const entry = {
+    guestName: document.getElementById("guestName").value,
+    relationship: document.getElementById("relationship").value,
+    message: document.getElementById("message").value,
+    glyphNodeId: document.getElementById("glyphSelect").value,
+    deviceType: "kiosk-or-phone",
+    modules: {}, // future-proof
+    media: [],
+    dogInteractions: []
+  };
+
+  // SEND TO NETLIFY BACKEND
+  fetch("/.netlify/functions/submit-entry", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entry)
+  })
+    .then(res => res.json())
+    .then(data => {
+      console.log("Saved:", data.entry);
+      loadEntries(); // refresh UI from backend
+      document.getElementById("message").value = "";
+    })
+    .catch(err => console.error("Error submitting entry:", err));
+});
+
+// Render glyph list
+function renderGlyphList() {
+  const ul = document.getElementById("glyphListItems");
+  ul.innerHTML = "";
+
+  glyphNodes.forEach(node => {
+    const count = entries.filter(e => e.glyphNodeId === node.id).length;
+
+    const li = document.createElement("li");
+    li.className = "glyph-item";
+
+    li.innerHTML = `
+      <span class="color-dot" style="background:${node.color}"></span>
+      <div>
+        <strong>${node.label}</strong><br>
+        <span style="opacity:0.7">${count} entr${count === 1 ? "y" : "ies"}</span>
+      </div>
+    `;
+
+    ul.appendChild(li);
+  });
+}
+
+// Render SVG glyph map
+function renderGlyphMap() {
+  const svg = document.getElementById("glyphMap");
+  svg.innerHTML = "";
+
+  const size = 400;
+  const radius = 140;
+  const center = size / 2;
+
+  // Couple nucleus
+  const nucleus = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  nucleus.setAttribute("cx", center);
+  nucleus.setAttribute("cy", center);
+  nucleus.setAttribute("r", 40);
+  nucleus.setAttribute("fill", "#111827");
+  svg.appendChild(nucleus);
+
+  const nucleusText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  nucleusText.setAttribute("x", center);
+  nucleusText.setAttribute("y", center + 4);
+  nucleusText.setAttribute("text-anchor", "middle");
+  nucleusText.setAttribute("fill", "#F9FAFB");
+  nucleusText.textContent = "The Couple";
+  svg.appendChild(nucleusText);
+
+  // Glyph nodes
+  glyphNodes.forEach((node, index) => {
+    const angle = (index / glyphNodes.length) * 2 * Math.PI - Math.PI / 2;
+    const x = center + radius * Math.cos(angle);
+    const y = center + radius * Math.sin(angle);
+    const count = entries.filter(e => e.glyphNodeId === node.id).length;
+
+    // Line
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", center);
+    line.setAttribute("y1", center);
+    line.setAttribute("x2", x);
+    line.setAttribute("y2", y);
+    line.setAttribute("stroke", "#D1D5DB");
+    svg.appendChild(line);
+
+    // Node circle
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("cx", x);
+    circle.setAttribute("cy", y);
+    circle.setAttribute("r", 20);
+    circle.setAttribute("fill", node.color);
+    circle.setAttribute("stroke", "#111827");
+    svg.appendChild(circle);
+
+    // Label
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", x);
+    label.setAttribute("y", y - 28);
+    label.setAttribute("text-anchor", "middle");
+    label.textContent = node.label;
+    svg.appendChild(label);
+
+    // Count
+    const countText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    countText.setAttribute("x", x);
+    countText.setAttribute("y", y + 4);
+    countText.setAttribute("text-anchor", "middle");
+    countText.setAttribute("font-weight", "700");
+    countText.textContent = count;
+    svg.appendChild(countText);
+  });
+}
