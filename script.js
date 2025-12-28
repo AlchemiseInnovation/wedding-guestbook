@@ -40,7 +40,7 @@ async function loadEntries() {
     return [];
   }
 
-  // ⭐ FIX: normalize glyphnodeid → glyphNodeId
+  // Normalize field names for UI
   return data.map(e => ({
     ...e,
     glyphNodeId: e.glyphnodeid
@@ -81,19 +81,40 @@ function populateGlyphSelect() {
 
 
 // ---------------------------------------------------------
-// 6. HANDLE FORM SUBMISSION
+// 6. HANDLE FORM SUBMISSION (WITH VALIDATION)
 // ---------------------------------------------------------
 document.getElementById("entryForm").addEventListener("submit", async e => {
   e.preventDefault();
 
-  const selectedGlyph = glyphNodes.find(
-    g => g.id === document.getElementById("glyphSelect").value
-  );
+  const guestName = document.getElementById("guestName").value.trim();
+  const relationship = document.getElementById("relationship").value.trim();
+  const message = document.getElementById("message").value.trim();
+  const glyphId = document.getElementById("glyphSelect").value;
+
+  // ---------------------------
+  // VALIDATION RULES
+  // ---------------------------
+  if (!guestName) {
+    alert("Please enter your name.");
+    return;
+  }
+
+  if (!glyphId) {
+    alert("Please select a glyph.");
+    return;
+  }
+
+  if (!message) {
+    alert("Please enter a message.");
+    return;
+  }
+
+  const selectedGlyph = glyphNodes.find(g => g.id === glyphId);
 
   const entry = {
-    guestname: document.getElementById("guestName").value,
-    relationship: document.getElementById("relationship").value,
-    message: document.getElementById("message").value,
+    guestname: guestName,
+    relationship: relationship,
+    message: message,
     glyphnodeid: selectedGlyph.id,
     glyph: selectedGlyph.label,
     devicetype: "kiosk-or-phone",
@@ -121,7 +142,21 @@ async function refreshEntries() {
 
 
 // ---------------------------------------------------------
-// 8. RENDER GLYPH LIST
+// 8. REAL-TIME UPDATES
+// ---------------------------------------------------------
+db.channel("entries-realtime")
+  .on(
+    "postgres_changes",
+    { event: "*", schema: "public", table: "entries" },
+    () => {
+      refreshEntries();
+    }
+  )
+  .subscribe();
+
+
+// ---------------------------------------------------------
+// 9. RENDER GLYPH LIST
 // ---------------------------------------------------------
 function renderGlyphList() {
   const ul = document.getElementById("glyphListItems");
@@ -147,7 +182,7 @@ function renderGlyphList() {
 
 
 // ---------------------------------------------------------
-// 9. RENDER SVG GLYPH MAP
+// 10. RENDER SVG GLYPH MAP
 // ---------------------------------------------------------
 function renderGlyphMap() {
   const svg = document.getElementById("glyphMap");
