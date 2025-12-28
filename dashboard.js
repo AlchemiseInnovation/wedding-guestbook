@@ -1,11 +1,19 @@
+// ---------------------------------------------------------
+// SUPABASE CLIENT (WITH REAL KEY)
+// ---------------------------------------------------------
 const SUPABASE_URL = "https://hagiyjmimmdaubrgndik.supabase.co";
-const SUPABASE_KEY = "YOUR_KEY";
+const SUPABASE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhZ2l5am1pbW1kYXVicmduZGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTQ4ODAsImV4cCI6MjA4MjQ5MDg4MH0.bTCzaL35Qk7UDduqmsyfyXKkLQBulrEZ0IbZ3ZA6S_s";
+
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let glyphNodes = [];
 let entries = [];
 
-// Load glyphs
+
+// ---------------------------------------------------------
+// LOAD GLYPHS
+// ---------------------------------------------------------
 fetch("glyphs.json")
   .then(res => res.json())
   .then(data => {
@@ -13,12 +21,20 @@ fetch("glyphs.json")
     refreshDashboard();
   });
 
-// Load entries
+
+// ---------------------------------------------------------
+// LOAD ENTRIES
+// ---------------------------------------------------------
 async function loadEntries() {
-  const { data } = await db
+  const { data, error } = await db
     .from("entries")
     .select("*")
     .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Error loading entries:", error);
+    return [];
+  }
 
   return data.map(e => ({
     ...e,
@@ -26,7 +42,10 @@ async function loadEntries() {
   }));
 }
 
-// Refresh dashboard
+
+// ---------------------------------------------------------
+// REFRESH DASHBOARD
+// ---------------------------------------------------------
 async function refreshDashboard() {
   entries = await loadEntries();
   renderStats();
@@ -34,7 +53,10 @@ async function refreshDashboard() {
   renderGlyphMap();
 }
 
-// Render stats
+
+// ---------------------------------------------------------
+// RENDER STATS
+// ---------------------------------------------------------
 function renderStats() {
   document.getElementById("totalEntries").textContent =
     `Total Entries: ${entries.length}`;
@@ -44,7 +66,7 @@ function renderStats() {
     counts[e.glyphNodeId] = (counts[e.glyphNodeId] || 0) + 1;
   });
 
-  const top = Object.entries(counts).sort((a,b) => b[1]-a[1])[0];
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
   document.getElementById("topGlyph").textContent =
     top ? `Top Glyph: ${top[0]} (${top[1]})` : "Top Glyph: None";
 
@@ -55,19 +77,26 @@ function renderStats() {
     `Devices — Kiosk: ${kiosk}, Phone: ${phone}`;
 }
 
-// Render feed
+
+// ---------------------------------------------------------
+// RENDER FEED
+// ---------------------------------------------------------
 function renderFeed() {
   const ul = document.getElementById("feedList");
   ul.innerHTML = "";
 
   entries.slice().reverse().forEach(e => {
     const li = document.createElement("li");
-    li.textContent = `${e.guestname} (${e.relationship}) → ${e.glyph} — "${e.message}"`;
+    li.textContent =
+      `${e.guestname} (${e.relationship}) → ${e.glyph} — "${e.message}"`;
     ul.appendChild(li);
   });
 }
 
-// Render glyph map (reuse your existing logic)
+
+// ---------------------------------------------------------
+// RENDER GLYPH MAP
+// ---------------------------------------------------------
 function renderGlyphMap() {
   const svg = document.getElementById("glyphMap");
   svg.innerHTML = "";
@@ -99,12 +128,22 @@ function renderGlyphMap() {
   });
 }
 
-// Real-time updates
+
+// ---------------------------------------------------------
+// REALTIME UPDATES
+// ---------------------------------------------------------
 db.channel("entries-realtime")
-  .on("postgres_changes", { event: "*", schema: "public", table: "entries" }, () => {
-    refreshDashboard();
-  })
+  .on(
+    "postgres_changes",
+    { event: "*", schema: "public", table: "entries" },
+    () => refreshDashboard()
+  )
   .subscribe();
+
+
+// ---------------------------------------------------------
+// CONTROLS
+// ---------------------------------------------------------
 
 // Lockout toggle
 document.getElementById("toggleLockout").addEventListener("click", async () => {
@@ -113,7 +152,9 @@ document.getElementById("toggleLockout").addEventListener("click", async () => {
 
 // Export JSON
 document.getElementById("exportJSON").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify(entries, null, 2)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify(entries, null, 2)], {
+    type: "application/json"
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -123,10 +164,14 @@ document.getElementById("exportJSON").addEventListener("click", () => {
 
 // Export CSV
 document.getElementById("exportCSV").addEventListener("click", () => {
-  const header = "guestname,relationship,message,glyphnodeid,glyph,created_at\n";
-  const rows = entries.map(e =>
-    `${e.guestname},${e.relationship},${e.message},${e.glyphnodeid},${e.glyph},${e.created_at}`
-  ).join("\n");
+  const header =
+    "guestname,relationship,message,glyphnodeid,glyph,created_at\n";
+  const rows = entries
+    .map(
+      e =>
+        `${e.guestname},${e.relationship},${e.message},${e.glyphnodeid},${e.glyph},${e.created_at}`
+    )
+    .join("\n");
 
   const blob = new Blob([header + rows], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
