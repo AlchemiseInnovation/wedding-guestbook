@@ -39,6 +39,41 @@ input, textarea, select {
   border-radius: 8px;
   border: 1px solid #ddd;
 }
+#thankYouOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+#thankYouOverlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.thankyou-box {
+  background: white;
+  padding: 40px 60px;
+  text-align: center;
+  border-radius: 8px;
+  max-width: 400px;
+}
+
+.thankyou-box h2 {
+  margin: 0 0 10px;
+  font-size: 28px;
+}
+
+.thankyou-box p {
+  margin: 0;
+  font-size: 18px;
+}
 
 button {
   margin-top: 8px;
