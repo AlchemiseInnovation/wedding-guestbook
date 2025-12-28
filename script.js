@@ -1,32 +1,69 @@
+// ---------------------------------------------------------
+// 0. STATE
+// ---------------------------------------------------------
 let glyphNodes = [];
 let entries = [];
+
+
+// ---------------------------------------------------------
+// 1. SUPABASE CLIENT SETUP
+// ---------------------------------------------------------
 const SUPABASE_URL = "https://hagiyjmimmdaubrgndik.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhZ2l5am1pbW1kYXVicmduZGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTQ4ODAsImV4cCI6MjA4MjQ5MDg4MH0.bTCzaL35Qk7UDduqmsyfyXKkLQBulrEZ0IbZ3ZA6S_s";
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Load glyphs.json
+
+// ---------------------------------------------------------
+// 2. LOAD GLYPHS.JSON
+// ---------------------------------------------------------
 fetch("glyphs.json")
   .then(res => res.json())
   .then(data => {
     glyphNodes = data.glyphNodes;
     populateGlyphSelect();
-    loadEntries(); // <-- NEW: load shared backend entries
+    refreshEntries(); // load Supabase entries + render UI
   });
 
-// Load entries from Netlify backend
-function loadEntries() {
-  fetch("/.netlify/functions/entries")
-    .then(res => res.json())
-    .then(data => {
-      entries = data;
-      renderGlyphList();
-      renderGlyphMap();
-    })
-    .catch(err => console.error("Error loading entries:", err));
+
+// ---------------------------------------------------------
+// 3. LOAD ENTRIES FROM SUPABASE
+// ---------------------------------------------------------
+async function loadEntries() {
+  const { data, error } = await db
+    .from("entries")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Error loading entries:", error);
+    return [];
+  }
+
+  return data;
 }
 
-// Populate dropdown
+
+// ---------------------------------------------------------
+// 4. SUBMIT ENTRY TO SUPABASE
+// ---------------------------------------------------------
+async function submitEntry(entry) {
+  const { data, error } = await db
+    .from("entries")
+    .insert([entry]);
+
+  if (error) {
+    console.error("Error submitting entry:", error);
+    return null;
+  }
+
+  return data[0];
+}
+
+
+// ---------------------------------------------------------
+// 5. POPULATE GLYPH DROPDOWN
+// ---------------------------------------------------------
 function populateGlyphSelect() {
   const select = document.getElementById("glyphSelect");
   glyphNodes.forEach(g => {
@@ -37,8 +74,11 @@ function populateGlyphSelect() {
   });
 }
 
-// Handle form submission
-document.getElementById("entryForm").addEventListener("submit", e => {
+
+// ---------------------------------------------------------
+// 6. HANDLE FORM SUBMISSION
+// ---------------------------------------------------------
+document.getElementById("entryForm").addEventListener("submit", async e => {
   e.preventDefault();
 
   const entry = {
@@ -47,27 +87,32 @@ document.getElementById("entryForm").addEventListener("submit", e => {
     message: document.getElementById("message").value,
     glyphNodeId: document.getElementById("glyphSelect").value,
     deviceType: "kiosk-or-phone",
-    modules: {}, // future-proof
+    modules: {},
     media: [],
     dogInteractions: []
   };
 
-  // SEND TO NETLIFY BACKEND
-  fetch("/.netlify/functions/submit-entry", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(entry)
-  })
-    .then(res => res.json())
-    .then(data => {
-      console.log("Saved:", data.entry);
-      loadEntries(); // refresh UI from backend
-      document.getElementById("message").value = "";
-    })
-    .catch(err => console.error("Error submitting entry:", err));
+  await submitEntry(entry);
+
+  document.getElementById("message").value = "";
+
+  refreshEntries();
 });
 
-// Render glyph list
+
+// ---------------------------------------------------------
+// 7. REFRESH UI (LOAD + RENDER)
+// ---------------------------------------------------------
+async function refreshEntries() {
+  entries = await loadEntries();
+  renderGlyphList();
+  renderGlyphMap();
+}
+
+
+// ---------------------------------------------------------
+// 8. RENDER GLYPH LIST
+// ---------------------------------------------------------
 function renderGlyphList() {
   const ul = document.getElementById("glyphListItems");
   ul.innerHTML = "";
@@ -90,7 +135,10 @@ function renderGlyphList() {
   });
 }
 
-// Render SVG glyph map
+
+// ---------------------------------------------------------
+// 9. RENDER SVG GLYPH MAP
+// ---------------------------------------------------------
 function renderGlyphMap() {
   const svg = document.getElementById("glyphMap");
   svg.innerHTML = "";
@@ -99,7 +147,7 @@ function renderGlyphMap() {
   const radius = 140;
   const center = size / 2;
 
-  // Couple nucleus
+  // Nucleus
   const nucleus = document.createElementNS("http://www.w3.org/2000/svg", "circle");
   nucleus.setAttribute("cx", center);
   nucleus.setAttribute("cy", center);
