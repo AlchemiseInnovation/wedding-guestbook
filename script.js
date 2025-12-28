@@ -1,7 +1,10 @@
 // ---------------------------------------------------------
 // 0. STATE
 // ---------------------------------------------------------
-let glyphNodes = [];
+let glyphNodes = [];        // now loaded from Supabase
+let themedGlyphs = [];      // glyphs after theme applied
+let themes = {};            // all themes from DB
+let themeConfig = {};       // active theme config
 let entries = [];
 
 
@@ -9,25 +12,148 @@ let entries = [];
 // 1. SUPABASE CLIENT SETUP
 // ---------------------------------------------------------
 const SUPABASE_URL = "https://hagiyjmimmdaubrgndik.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhZ2l5am1pbW1kYXVicmduZGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTQ4ODAsImV4cCI6MjA4MjQ5MDg4MH0.bTCzaL35Qk7UDduqmsyfyXKkLQBulrEZ0IbZ3ZA6S_s";
+const SUPABASE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhZ2l5am1pbW1kYXVicmduZGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTQ4ODAsImV4cCI6MjA4MjQ5MDg4MH0.bTCzaL35Qk7UDduqmsyfyXKkLQBulrEZ0IbZ3ZA6S_s";
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 
 // ---------------------------------------------------------
-// 2. LOAD GLYPHS.JSON
+// 2. LOAD GLYPHS (FROM SUPABASE, replacing glyphs.json)
 // ---------------------------------------------------------
-fetch("glyphs.json")
-  .then(res => res.json())
-  .then(data => {
-    glyphNodes = data.glyphNodes;
-    populateGlyphSelect();
-    refreshEntries();
-  });
+async function loadGlyphs() {
+  const { data, error } = await db
+    .from("glyphs")
+    .select("*")
+    .eq("active", true)
+    .order("order_index", { ascending: true });
+
+  if (error) {
+    console.error("Error loading glyphs:", error);
+    return [];
+  }
+
+  return data;
+}
 
 
 // ---------------------------------------------------------
-// 3. LOAD ENTRIES FROM SUPABASE
+// 3. LOAD THEMES
+// ---------------------------------------------------------
+async function loadThemes() {
+  const { data, error } = await db.from("themes").select("*");
+  if (error) {
+    console.error("Error loading themes:", error);
+    return {};
+  }
+
+  const map = {};
+  data.forEach(t => (map[t.name] = t));
+  return map;
+}
+
+
+// ---------------------------------------------------------
+// 4. LOAD THEME CONFIG
+// ---------------------------------------------------------
+async function loadThemeConfig() {
+  const { data, error } = await db
+    .from("settings")
+    .select("value")
+    .eq("key", "themeConfig")
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error loading themeConfig:", error);
+    return {
+      theme: "elegant",
+      labelTheme: "elegant",
+      colorTheme: "elegant",
+      iconTheme: "elegant"
+    };
+  }
+
+  return data?.value || {
+    theme: "elegant",
+    labelTheme: "elegant",
+    colorTheme: "elegant",
+    iconTheme: "elegant"
+  };
+}
+
+
+// ---------------------------------------------------------
+// 5. APPLY THEME TO A GLYPH
+// ---------------------------------------------------------
+function applyThemeToGlyph(glyph, themes, config) {
+  const { labelTheme, colorTheme, iconTheme } = config;
+
+  const labelPack = themes[labelTheme] || {};
+  const colorPack = themes[colorTheme] || {};
+  const iconPack = themes[iconTheme] || {};
+
+  const themedLabel =
+    labelPack.labels?.[glyph.id] || glyph.label;
+
+  const themedColor =
+    colorPack.colors?.[glyph.id] || glyph.color;
+
+  let icon =
+    glyph.icon ||
+    iconPack.icons?.[glyph.id] ||
+    `/icons/${iconTheme}/${glyph.id}.svg`;
+
+  if (!icon) icon = "/icons/placeholder.svg";
+
+  return {
+    ...glyph,
+    label: themedLabel,
+    color: themedColor,
+    resolvedIcon: icon
+  };
+}
+
+
+// ---------------------------------------------------------
+// 6. INITIALIZE KIOSK
+// ---------------------------------------------------------
+async function initKiosk() {
+  themes = await loadThemes();
+  themeConfig = await loadThemeConfig();
+  glyphNodes = await loadGlyphs();
+
+  themedGlyphs = glyphNodes.map(g =>
+    applyThemeToGlyph(g, themes, themeConfig)
+  );
+
+  populateGlyphSelect();
+  refreshEntries();
+
+  // Realtime theme updates
+  db.channel("settings-realtime-kiosk")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "settings" },
+      async payload => {
+        if (payload.new.key === "themeConfig") {
+          themeConfig = payload.new.value;
+          themedGlyphs = glyphNodes.map(g =>
+            applyThemeToGlyph(g, themes, themeConfig)
+          );
+          populateGlyphSelect();
+          renderGlyphList();
+          renderGlyphMap();
+        }
+      }
+    )
+    .subscribe();
+}
+
+initKiosk();
+
+
+// ---------------------------------------------------------
+// 7. LOAD ENTRIES FROM SUPABASE
 // ---------------------------------------------------------
 async function loadEntries() {
   const { data, error } = await db
@@ -40,7 +166,6 @@ async function loadEntries() {
     return [];
   }
 
-  // Normalize field names for UI
   return data.map(e => ({
     ...e,
     glyphNodeId: e.glyphnodeid
@@ -49,7 +174,7 @@ async function loadEntries() {
 
 
 // ---------------------------------------------------------
-// 4. SUBMIT ENTRY TO SUPABASE
+// 8. SUBMIT ENTRY TO SUPABASE (unchanged)
 // ---------------------------------------------------------
 async function submitEntry(entry) {
   const { data, error } = await db
@@ -67,11 +192,13 @@ async function submitEntry(entry) {
 
 
 // ---------------------------------------------------------
-// 5. POPULATE GLYPH DROPDOWN
+// 9. POPULATE GLYPH DROPDOWN (now uses themedGlyphs)
 // ---------------------------------------------------------
 function populateGlyphSelect() {
   const select = document.getElementById("glyphSelect");
-  glyphNodes.forEach(g => {
+  select.innerHTML = "";
+
+  themedGlyphs.forEach(g => {
     const opt = document.createElement("option");
     opt.value = g.id;
     opt.textContent = g.label;
@@ -81,7 +208,7 @@ function populateGlyphSelect() {
 
 
 // ---------------------------------------------------------
-// 6. HANDLE FORM SUBMISSION (WITH VALIDATION)
+// 10. HANDLE FORM SUBMISSION (unchanged)
 // ---------------------------------------------------------
 document.getElementById("entryForm").addEventListener("submit", async e => {
   e.preventDefault();
@@ -91,25 +218,11 @@ document.getElementById("entryForm").addEventListener("submit", async e => {
   const message = document.getElementById("message").value.trim();
   const glyphId = document.getElementById("glyphSelect").value;
 
-  // ---------------------------
-  // VALIDATION RULES
-  // ---------------------------
-  if (!guestName) {
-    alert("Please enter your name.");
-    return;
-  }
+  if (!guestName) return alert("Please enter your name.");
+  if (!glyphId) return alert("Please select a glyph.");
+  if (!message) return alert("Please enter a message.");
 
-  if (!glyphId) {
-    alert("Please select a glyph.");
-    return;
-  }
-
-  if (!message) {
-    alert("Please enter a message.");
-    return;
-  }
-
-  const selectedGlyph = glyphNodes.find(g => g.id === glyphId);
+  const selectedGlyph = themedGlyphs.find(g => g.id === glyphId);
 
   const entry = {
     guestname: guestName,
@@ -132,7 +245,7 @@ document.getElementById("entryForm").addEventListener("submit", async e => {
 
 
 // ---------------------------------------------------------
-// 7. REFRESH UI
+// 11. REFRESH UI (unchanged)
 // ---------------------------------------------------------
 async function refreshEntries() {
   entries = await loadEntries();
@@ -142,27 +255,25 @@ async function refreshEntries() {
 
 
 // ---------------------------------------------------------
-// 8. REAL-TIME UPDATES
+// 12. REAL-TIME UPDATES (unchanged)
 // ---------------------------------------------------------
 db.channel("entries-realtime")
   .on(
     "postgres_changes",
     { event: "*", schema: "public", table: "entries" },
-    () => {
-      refreshEntries();
-    }
+    () => refreshEntries()
   )
   .subscribe();
 
 
 // ---------------------------------------------------------
-// 9. RENDER GLYPH LIST
+// 13. RENDER GLYPH LIST (now uses themedGlyphs)
 // ---------------------------------------------------------
 function renderGlyphList() {
   const ul = document.getElementById("glyphListItems");
   ul.innerHTML = "";
 
-  glyphNodes.forEach(node => {
+  themedGlyphs.forEach(node => {
     const count = entries.filter(e => e.glyphNodeId === node.id).length;
 
     const li = document.createElement("li");
@@ -182,7 +293,7 @@ function renderGlyphList() {
 
 
 // ---------------------------------------------------------
-// 10. RENDER SVG GLYPH MAP
+// 14. RENDER SVG GLYPH MAP (now uses themedGlyphs)
 // ---------------------------------------------------------
 function renderGlyphMap() {
   const svg = document.getElementById("glyphMap");
@@ -207,8 +318,8 @@ function renderGlyphMap() {
   nucleusText.textContent = "The Couple";
   svg.appendChild(nucleusText);
 
-  glyphNodes.forEach((node, index) => {
-    const angle = (index / glyphNodes.length) * 2 * Math.PI - Math.PI / 2;
+  themedGlyphs.forEach((node, index) => {
+    const angle = (index / themedGlyphs.length) * 2 * Math.PI - Math.PI / 2;
     const x = center + radius * Math.cos(angle);
     const y = center + radius * Math.sin(angle);
     const count = entries.filter(e => e.glyphNodeId === node.id).length;
