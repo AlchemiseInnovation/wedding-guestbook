@@ -1,5 +1,9 @@
 let glyphNodes = [];
 let entries = [];
+const SUPABASE_URL = "https://hagiyjmimmdaubrgndik.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhZ2l5am1pbW1kYXVicmduZGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTQ4ODAsImV4cCI6MjA4MjQ5MDg4MH0.bTCzaL35Qk7UDduqmsyfyXKkLQBulrEZ0IbZ3ZA6S_s";
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Load glyphs.json
 fetch("glyphs.json")
