@@ -1,7 +1,7 @@
 // ---------------------------------------------------------
 // 0. STATE
 // ---------------------------------------------------------
-let glyphNodes = [];        // now loaded from Supabase
+let glyphNodes = [];        // raw glyphs from Supabase
 let themedGlyphs = [];      // glyphs after theme applied
 let themes = {};            // all themes from DB
 let themeConfig = {};       // active theme config
@@ -19,7 +19,7 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 
 // ---------------------------------------------------------
-// 2. LOAD GLYPHS (FROM SUPABASE, replacing glyphs.json)
+// 2. LOAD GLYPHS (FROM SUPABASE)
 // ---------------------------------------------------------
 async function loadGlyphs() {
   const { data, error } = await db
@@ -115,7 +115,23 @@ function applyThemeToGlyph(glyph, themes, config) {
 
 
 // ---------------------------------------------------------
-// 6. INITIALIZE KIOSK
+// 6. THANK-YOU OVERLAY
+// ---------------------------------------------------------
+function showThankYou(message = "Your message has been added.") {
+  const overlay = document.getElementById("thankYouOverlay");
+  const msg = document.getElementById("thankYouMessage");
+
+  msg.textContent = message;
+  overlay.classList.add("visible");
+
+  setTimeout(() => {
+    overlay.classList.remove("visible");
+  }, 2500);
+}
+
+
+// ---------------------------------------------------------
+// 7. INITIALIZE KIOSK
 // ---------------------------------------------------------
 async function initKiosk() {
   themes = await loadThemes();
@@ -153,7 +169,7 @@ initKiosk();
 
 
 // ---------------------------------------------------------
-// 7. LOAD ENTRIES FROM SUPABASE
+// 8. LOAD ENTRIES
 // ---------------------------------------------------------
 async function loadEntries() {
   const { data, error } = await db
@@ -174,7 +190,7 @@ async function loadEntries() {
 
 
 // ---------------------------------------------------------
-// 8. SUBMIT ENTRY TO SUPABASE (unchanged)
+// 9. SUBMIT ENTRY
 // ---------------------------------------------------------
 async function submitEntry(entry) {
   const { data, error } = await db
@@ -192,7 +208,7 @@ async function submitEntry(entry) {
 
 
 // ---------------------------------------------------------
-// 9. POPULATE GLYPH DROPDOWN (now uses themedGlyphs)
+// 10. POPULATE GLYPH SELECT
 // ---------------------------------------------------------
 function populateGlyphSelect() {
   const select = document.getElementById("glyphSelect");
@@ -208,7 +224,7 @@ function populateGlyphSelect() {
 
 
 // ---------------------------------------------------------
-// 10. HANDLE FORM SUBMISSION (unchanged)
+// 11. FORM SUBMISSION
 // ---------------------------------------------------------
 document.getElementById("entryForm").addEventListener("submit", async e => {
   e.preventDefault();
@@ -238,14 +254,21 @@ document.getElementById("entryForm").addEventListener("submit", async e => {
 
   await submitEntry(entry);
 
+  // Reset form
+  document.getElementById("guestName").value = "";
+  document.getElementById("relationship").value = "";
   document.getElementById("message").value = "";
+  document.getElementById("glyphSelect").value = "";
+
+  // Thank-you overlay
+  showThankYou();
 
   refreshEntries();
 });
 
 
 // ---------------------------------------------------------
-// 11. REFRESH UI (unchanged)
+// 12. REFRESH UI
 // ---------------------------------------------------------
 async function refreshEntries() {
   entries = await loadEntries();
@@ -255,7 +278,7 @@ async function refreshEntries() {
 
 
 // ---------------------------------------------------------
-// 12. REAL-TIME UPDATES (unchanged)
+// 13. REALTIME ENTRY UPDATES
 // ---------------------------------------------------------
 db.channel("entries-realtime")
   .on(
@@ -267,7 +290,7 @@ db.channel("entries-realtime")
 
 
 // ---------------------------------------------------------
-// 13. RENDER GLYPH LIST (now uses themedGlyphs)
+// 14. RENDER GLYPH LIST
 // ---------------------------------------------------------
 function renderGlyphList() {
   const ul = document.getElementById("glyphListItems");
@@ -293,7 +316,7 @@ function renderGlyphList() {
 
 
 // ---------------------------------------------------------
-// 14. RENDER SVG GLYPH MAP (now uses themedGlyphs)
+// 15. RENDER GLYPH MAP
 // ---------------------------------------------------------
 function renderGlyphMap() {
   const svg = document.getElementById("glyphMap");
