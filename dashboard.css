@@ -1,0 +1,113 @@
+/* ---------------------------------------------------------
+   GLOBAL LAYOUT
+--------------------------------------------------------- */
+
+body {
+  margin: 0;
+  padding: 20px;
+  font-family: system-ui, sans-serif;
+  background: #f5f6fa;
+  color: #111;
+}
+
+h1 {
+  margin-top: 0;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+h2 {
+  margin-bottom: 10px;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+/* Section layout */
+section {
+  background: white;
+  padding: 20px;
+  margin-bottom: 25px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* ---------------------------------------------------------
+   STATS PANEL
+--------------------------------------------------------- */
+
+#stats div {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+/* ---------------------------------------------------------
+   LIVE FEED
+--------------------------------------------------------- */
+
+#feedList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+#feedList li {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: #f0f2f5;
+  border-radius: 8px;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+/* ---------------------------------------------------------
+   GLYPH MAP
+--------------------------------------------------------- */
+
+#glyphMapSection {
+  text-align: center;
+}
+
+#glyphMap {
+  margin-top: 10px;
+}
+
+/* ---------------------------------------------------------
+   CONTROLS
+--------------------------------------------------------- */
+
+#controls button {
+  display: inline-block;
+  margin-right: 12px;
+  margin-bottom: 12px;
+  padding: 10px 16px;
+  font-size: 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #111827;
+  color: white;
+  transition: background 0.2s ease;
+}
+
+#controls button:hover {
+  background: #374151;
+}
+
+/* ---------------------------------------------------------
+   SCROLLBAR (nice touch)
+--------------------------------------------------------- */
+
+#feedList::-webkit-scrollbar {
+  width: 8px;
+}
+
+#feedList::-webkit-scrollbar-thumb {
+  background: #c5c7cc;
+  border-radius: 4px;
+}
+
+#feedList::-webkit-scrollbar-track {
+  background: #eee;
+}
