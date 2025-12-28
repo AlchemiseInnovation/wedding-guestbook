@@ -81,16 +81,17 @@ function populateGlyphSelect() {
 document.getElementById("entryForm").addEventListener("submit", async e => {
   e.preventDefault();
 
-  const entry = {
-    guestName: document.getElementById("guestName").value,
-    relationship: document.getElementById("relationship").value,
-    message: document.getElementById("message").value,
-    glyphNodeId: document.getElementById("glyphSelect").value,
-    deviceType: "kiosk-or-phone",
-    modules: {},
-    media: [],
-    dogInteractions: []
-  };
+const entry = {
+  guestname: document.getElementById("guestName").value,
+  relationship: document.getElementById("relationship").value,
+  message: document.getElementById("message").value,
+  glyphnodeid: document.getElementById("glyphSelect").value,
+  devicetype: "kiosk-or-phone",
+  modules: {},
+  media: [],
+  doginteractions: []
+};
+
 
   await submitEntry(entry);
 
