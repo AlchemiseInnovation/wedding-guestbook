@@ -22,7 +22,7 @@ fetch("glyphs.json")
   .then(data => {
     glyphNodes = data.glyphNodes;
     populateGlyphSelect();
-    refreshEntries(); // load Supabase entries + render UI
+    refreshEntries();
   });
 
 
@@ -40,7 +40,11 @@ async function loadEntries() {
     return [];
   }
 
-  return data;
+  // ⭐ FIX: normalize glyphnodeid → glyphNodeId
+  return data.map(e => ({
+    ...e,
+    glyphNodeId: e.glyphnodeid
+  }));
 }
 
 
@@ -51,7 +55,7 @@ async function submitEntry(entry) {
   const { data, error } = await db
     .from("entries")
     .insert([entry])
-    .select(); // ensures Supabase returns the inserted row
+    .select();
 
   if (error) {
     console.error("Error submitting entry:", error);
@@ -60,7 +64,6 @@ async function submitEntry(entry) {
 
   return data ? data[0] : null;
 }
-
 
 
 // ---------------------------------------------------------
@@ -83,21 +86,21 @@ function populateGlyphSelect() {
 document.getElementById("entryForm").addEventListener("submit", async e => {
   e.preventDefault();
 
-const selectedGlyph = glyphNodes.find(g => g.id === document.getElementById("glyphSelect").value);
+  const selectedGlyph = glyphNodes.find(
+    g => g.id === document.getElementById("glyphSelect").value
+  );
 
-const entry = {
-  guestname: document.getElementById("guestName").value,
-  relationship: document.getElementById("relationship").value,
-  message: document.getElementById("message").value,
-  glyphnodeid: selectedGlyph.id,
-  glyph: selectedGlyph.label, // NEW LINE
-  devicetype: "kiosk-or-phone",
-  modules: {},
-  media: [],
-  doginteractions: []
-};
-
-
+  const entry = {
+    guestname: document.getElementById("guestName").value,
+    relationship: document.getElementById("relationship").value,
+    message: document.getElementById("message").value,
+    glyphnodeid: selectedGlyph.id,
+    glyph: selectedGlyph.label,
+    devicetype: "kiosk-or-phone",
+    modules: {},
+    media: [],
+    doginteractions: []
+  };
 
   await submitEntry(entry);
 
@@ -108,7 +111,7 @@ const entry = {
 
 
 // ---------------------------------------------------------
-// 7. REFRESH UI (LOAD + RENDER)
+// 7. REFRESH UI
 // ---------------------------------------------------------
 async function refreshEntries() {
   entries = await loadEntries();
@@ -154,7 +157,6 @@ function renderGlyphMap() {
   const radius = 140;
   const center = size / 2;
 
-  // Nucleus
   const nucleus = document.createElementNS("http://www.w3.org/2000/svg", "circle");
   nucleus.setAttribute("cx", center);
   nucleus.setAttribute("cy", center);
@@ -170,14 +172,12 @@ function renderGlyphMap() {
   nucleusText.textContent = "The Couple";
   svg.appendChild(nucleusText);
 
-  // Glyph nodes
   glyphNodes.forEach((node, index) => {
     const angle = (index / glyphNodes.length) * 2 * Math.PI - Math.PI / 2;
     const x = center + radius * Math.cos(angle);
     const y = center + radius * Math.sin(angle);
     const count = entries.filter(e => e.glyphNodeId === node.id).length;
 
-    // Line
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
     line.setAttribute("x1", center);
     line.setAttribute("y1", center);
@@ -186,7 +186,6 @@ function renderGlyphMap() {
     line.setAttribute("stroke", "#D1D5DB");
     svg.appendChild(line);
 
-    // Node circle
     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     circle.setAttribute("cx", x);
     circle.setAttribute("cy", y);
@@ -195,7 +194,6 @@ function renderGlyphMap() {
     circle.setAttribute("stroke", "#111827");
     svg.appendChild(circle);
 
-    // Label
     const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
     label.setAttribute("x", x);
     label.setAttribute("y", y - 28);
@@ -203,7 +201,6 @@ function renderGlyphMap() {
     label.textContent = node.label;
     svg.appendChild(label);
 
-    // Count
     const countText = document.createElementNS("http://www.w3.org/2000/svg", "text");
     countText.setAttribute("x", x);
     countText.setAttribute("y", y + 4);
